@@ -207,3 +207,111 @@ export const verifyEmail = async (req, res) => {
         return res.json({ success: false, message: error.message })
     }
 }
+
+// Function to check if user is authenticated
+export const isAuthenticated = async (req, res) => {
+    try {
+        return res.json({ success: true });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+}
+
+// Function to send password reset OTP
+export const sendResetOtp = async (req, res) => {
+    // Extract email from the request body
+    const { email } = req.body;
+
+    // Check if the email is provided in the request
+    if (!email) {
+        return res.json({ success: false, message: 'Email is required' });
+    }
+
+    try {
+        // Find the user in the database using the provided email
+        const user = await userModel.findOne({ email });
+
+        // If no user is found, return an error response
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' });
+        }
+
+        // Generate a 6-digit random OTP
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+
+        // Store the OTP and set an expiry time for it (15 minutes from now)
+        user.resetOtp = otp;
+        user.resetOtpExpireAt = Date.now() + 15 * 60 * 1000;
+
+        // Save the updated user details in the database
+        await user.save();
+
+        // Define the email options for sending the OTP
+        const mailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: 'Fight Club - Password Reset OTP',
+            text: `Your Password Reset OTP is: ${otp}. Reset your password using this OTP.`
+        }
+
+        // Send the OTP email to the user
+        await transporter.sendMail(mailOptions);
+
+        // Return a success response indicating the OTP was sent
+        return res.json({ success: true, message: 'OTP sent to your email' });
+    } catch (error) {
+        // Handle any errors during the process and return an error response
+        return res.json({ success: false, message: error.message });
+    }
+}
+
+// Function to Reset User Password
+// This function handles the password reset process by validating the email, OTP, 
+// and new password provided by the user, and updating the user's password in the database.
+export const resetPassword = async (req, res) => {
+    // Extract email, OTP, and newPassword from the request body
+    const { email, otp, newPassword } = req.body;
+
+    // Check if all required fields are provided
+    if (!email || !otp || !newPassword) {
+        return res.json({ success: false, message: 'Email, OTP and New Password are required' });
+    }
+
+    try {
+        // Find the user in the database using the provided email
+        const user = await userModel.findOne({ email });
+
+        // If no user is found, return an error response
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' });
+        }
+
+        // Check if the provided OTP matches the one stored in the database
+        if (user.resetOtp === '' || user.resetOtp !== otp) {
+            return res.json({ success: false, message: 'Invalid OTP' });
+        }
+
+        // Check if the OTP has expired
+        if (user.resetOtpExpireAt < Date.now()) {
+            return res.json({ success: false, message: 'OTP Expired' });
+        }
+
+        // Hash the new password using bcrypt
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password and reset OTP-related fields
+        user.password = hashedPassword;  // Save the new hashed password
+        user.resetOtp = '';             // Clear the OTP
+        user.resetOtpExpireAt = 0;      // Reset the OTP expiration time
+
+        // Save the updated user details to the database
+        await user.save();
+
+        // Return a success response
+        return res.json({ success: true, message: 'Password has been reset successfully.' });
+
+    } catch (error) {
+        // Handle any errors during the process and return an error response
+        return res.json({ success: false, message: error.message });
+    }
+};
