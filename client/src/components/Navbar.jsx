@@ -12,6 +12,32 @@ const Navbar = () => {
   // Destructure values from the global AppContext
   const { userData, backendUrl, setUserData, setIsLoggedIn } = useContext(AppContext);
 
+  // Function to send a verification OTP to the user's email
+  const sendVerificationOtp = async () => {
+    try {
+      // Enable credentials to be included in cross-origin requests
+      axios.defaults.withCredentials = true;
+
+      // Make a POST request to the backend to send the OTP
+      const { data } = await axios.post(backendUrl + '/api/auth/send-verify-otp');
+
+      // Check if the request was successful
+      if (data.success) {
+        // Navigate the user to the email verification page
+        navigate('/verify-email');
+
+        // Display a success message using a toast notification
+        toast.success(data.message);
+      } else {
+        // Display an error message if the backend response indicates failure
+        toast.error(data.message);
+      }
+    } catch (error) {
+      // Handle any unexpected errors by displaying an error message
+      toast.error(error.message);
+    }
+  };
+
   // Function to handle user logout
   const logout = async () => {
     try {
@@ -50,7 +76,7 @@ const Navbar = () => {
             <ul className='list-none m-0 p-2 bg-gray-100 text-sm'>
               {/* Option to verify email if the account is not verified */}
               {!userData.isAccountVerfied && (
-                <li className='py-1 px-2 hover:bg-gray-200 cursor-pointer'>Verify Email</li>
+                <li onClick={sendVerificationOtp} className='py-1 px-2 hover:bg-gray-200 cursor-pointer'>Verify Email</li>
               )}
               {/* Logout option */}
               <li

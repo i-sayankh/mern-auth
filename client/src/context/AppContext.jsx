@@ -8,6 +8,7 @@ export const AppContext = createContext();
 
 // Define a provider component to wrap the application and provide shared state
 export const AppContextProvider = (props) => {
+    // Configure axios to include credentials (cookies)
     axios.defaults.withCredentials = true;
     
     // Fetch the backend URL from environment variables
