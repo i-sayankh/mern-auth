@@ -1,6 +1,6 @@
 // Import necessary libraries and hooks
 import axios from "axios"; // HTTP client for making requests
-import { createContext, useState } from "react"; // React hooks and context API
+import { createContext, useEffect, useState } from "react"; // React hooks and context API
 import { toast } from "react-toastify"; // Library for displaying toast notifications
 
 // Create a context to manage and share global application state
@@ -8,12 +8,33 @@ export const AppContext = createContext();
 
 // Define a provider component to wrap the application and provide shared state
 export const AppContextProvider = (props) => {
+    axios.defaults.withCredentials = true;
+    
     // Fetch the backend URL from environment variables
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
     // State variables to manage user authentication and user data
     const [isLoggedIn, setIsLoggedIn] = useState(false); // Tracks whether the user is logged in
     const [userData, setUserData] = useState(null); // Stores user data retrieved from the backend
+
+    // Function to fetch user authentication status from the backend
+    const getAuthState = async () => {
+        try {
+            // Make a GET request to the backend API for user authentication status
+            const { data } = await axios.get(backendUrl + '/api/auth/is-auth');
+
+            // Check the response and update user authentication status or show an error toast
+            if (data.success) {
+                setIsLoggedIn(true);
+                getUserData();
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            // Handle request errors and show an error toast
+            toast.error(error.message);
+        }
+    }
 
     // Function to fetch user data from the backend
     const getUserData = async () => {
@@ -28,6 +49,10 @@ export const AppContextProvider = (props) => {
             toast.error(error.message);
         }
     }
+
+    useEffect(() => {
+        getAuthState();
+    }, []);
 
     // Define the context value to be shared with the rest of the application
     const value = {
