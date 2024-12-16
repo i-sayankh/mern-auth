@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'; // For hashing and verifying passwords
 import jwt from 'jsonwebtoken'; // For generating JSON Web Tokens
 import userModel from '../models/userModel.js'; // Importing the user model for database interaction
 import transporter from '../config/nodemailer.js'
+import { EMAIL_VERIFY_TEMPLATE, PASSWORD_RESET_TEMPLATE } from '../config/emailTemplates.js';
 
 // Register Controller Function
 export const register = async (req, res) => {
@@ -147,7 +148,7 @@ export const sendVerifyOtp = async (req, res) => {
             from: process.env.SENDER_EMAIL,
             to: user.email,
             subject: 'Fight Club - Account Verification OTP',
-            text: `Your OTP is: ${otp}. Verify your account using this OTP.`
+            html: EMAIL_VERIFY_TEMPLATE.replace("{{otp}}", otp).replace("{{email}}", user.email)
         }
 
         // Send the OTP email to the user
@@ -251,7 +252,7 @@ export const sendResetOtp = async (req, res) => {
             from: process.env.SENDER_EMAIL,
             to: user.email,
             subject: 'Fight Club - Password Reset OTP',
-            text: `Your Password Reset OTP is: ${otp}. Reset your password using this OTP.`
+            html: PASSWORD_RESET_TEMPLATE.replace("{{otp}}", otp).replace("{{email}}", user.email)
         }
 
         // Send the OTP email to the user
